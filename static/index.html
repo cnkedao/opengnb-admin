@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenGNB 管理端</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="header-row">
+        <h1>OpenGNB 管理端</h1>
+        <span id="gnbTargetVersion" class="version-badge" title="配置项与高级选项所对齐的 OpenGNB 版本">OpenGNB 1.6.5</span>
+      </div>
+      <p class="sub">Index + Forward 配置 · 启停 · 内网节点配置包下载 · 适配 OpenGNB <span id="gnbTargetVersionSub">1.6.5</span></p>
+    </header>
+
+    <section class="card status-bar">
+      <div class="status-item">
+        <span class="label">运行状态</span>
+        <span id="runStatus" class="badge">加载中</span>
+      </div>
+      <div class="status-item">
+        <span class="label">PID</span>
+        <span id="runPid">-</span>
+      </div>
+      <div class="status-item actions">
+        <button id="btnStart" class="btn primary">启动 Index+Forward</button>
+        <button id="btnStop" class="btn danger">强制停止 gnb</button>
+        <button id="btnRefresh" class="btn">刷新状态</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>公网 Index 节点（VPS）</h2>
+      <div class="grid">
+        <label>节点模式
+          <select id="idxEnableForward">
+            <option value="1">Index + Forward</option>
+            <option value="0">仅 Index（关闭 Forward）</option>
+          </select>
+        </label>
+        <label>Node ID<input id="idxNodeid" type="number" value="1001"></label>
+        <label>监听端口<input id="idxListen" type="number" value="9001"></label>
+        <label class="required-field">公网 IP（必填）<input id="idxPublicIp" type="text" placeholder="填写 VPS 真实公网 IP，如 139.198.122.239"></label>
+        <label>TUN IP<input id="idxTunIp" type="text" value="10.1.0.1"></label>
+        <label>子网掩码<input id="idxNetmask" type="text" value="255.255.255.0"></label>
+        <label>Passcode（留空自动生成）<input id="idxPasscode" type="text" placeholder="8位十六进制"></label>
+        <label>multi-socket
+          <select id="idxMultiSocket">
+            <option value="off">off（推荐，无随机端口）</option>
+            <option value="on">on（额外 4 个随机 UDP 口）</option>
+          </select>
+        </label>
+        <label>额外固定监听端口<input id="idxExtraListens" type="text" placeholder="9002,9003,9004,9005"></label>
+        <label>OpenGNB bin 目录<input id="gnbBin" type="text" value="/data2/opengnb-1.6.5/bin"></label>
+        <label>gnb_crypto 路径（可留空）<input id="gnbCryptoBin" type="text" value=""></label>
+        <label>gnb 文件日志
+          <select id="idxGnbLogEnabled">
+            <option value="0">关</option>
+            <option value="1">开</option>
+          </select>
+        </label>
+        <label id="idxGnbLogPathLabel">日志路径（相对管理端目录）<input id="idxGnbLogPath" type="text" placeholder="logs/gnb-{nodeid}.log" value="logs/gnb-{nodeid}.log"></label>
+      </div>
+      <p class="field-hint" id="idxGnbLogHint">开启后写入 node.conf（含 main-log-level、index-log-level 等，仅 file-log-level 不会写文件）；默认 logs/gnb-1001.log。修改后需重新「生成全部配置」并重启 gnb。</p>
+      <p class="field-hint" id="idxModeHint">Index + Forward：address.conf 为 if|nodeid|...；仅 Index：为 i|nodeid|...，并自动关闭 set-fwdu0 / direct-forwarding</p>
+      <p class="field-hint">额外固定端口：逗号分隔，最多 4 个（含主端口共 5 个），便于防火墙固定放行 UDP</p>
+      <details class="advanced-box">
+        <summary>高级 node.conf 配置（Index + Forward 服务端）</summary>
+        <p class="field-hint">es-argv 传给 gnb_es，公网 VPS 通常<strong>不需要</strong> upnp；upnp 主要给内网节点用</p>
+        <div class="grid">
+          <label>index-worker
+            <select id="idxIndexWorker">
+              <option value="on">on</option>
+              <option value="off">off</option>
+            </select>
+          </label>
+          <label>index-service-worker
+            <select id="idxIndexServiceWorker">
+              <option value="on">on</option>
+              <option value="off">off</option>
+            </select>
+          </label>
+          <label>node-detect-worker
+            <select id="idxNodeDetectWorker">
+              <option value="off">off（推荐）</option>
+              <option value="on">on</option>
+            </select>
+          </label>
+          <label>set-fwdu0（Forward）
+            <select id="idxSetFwdu0">
+              <option value="on">on</option>
+              <option value="off">off</option>
+            </select>
+          </label>
+          <label>direct-forwarding
+            <select id="idxDirectForwarding">
+              <option value="on">on</option>
+              <option value="off">off</option>
+            </select>
+          </label>
+          <label>unified-forwarding
+            <select id="idxUnifiedForwarding">
+              <option value="">不设置</option>
+              <option value="off">off</option>
+              <option value="auto">auto</option>
+              <option value="super">super</option>
+              <option value="hyper">hyper</option>
+            </select>
+          </label>
+          <label>IP 协议栈
+            <select id="idxIpStack">
+              <option value="both">IPv4 + IPv6</option>
+              <option value="ipv4">仅 IPv4</option>
+              <option value="ipv6">仅 IPv6</option>
+            </select>
+          </label>
+          <label>MTU（留空默认）<input id="idxMtu" type="number" placeholder="1280"></label>
+          <label class="full-width">es-argv（gnb_es 参数，留空）
+            <input id="idxEsArgv" type="text" placeholder="公网服务端通常留空">
+          </label>
+        </div>
+        <h3 class="adv-subtitle">性能 / 安全（gnb 高级选项）</h3>
+        <p class="field-hint">crypto 默认 xor，无需配置。部分选项仅能通过 CLI 传递，会写入 scripts/start_linux.sh</p>
+        <div class="grid">
+          <label>safe-index（Index 通信加密）
+            <select id="idxSafeIndex">
+              <option value="off">off（默认）</option>
+              <option value="on">on</option>
+            </select>
+          </label>
+          <label>crypto-key-update-interval
+            <select id="idxCryptoKeyInterval">
+              <option value="">不设置（默认 none）</option>
+              <option value="hour">hour</option>
+              <option value="minute">minute</option>
+            </select>
+          </label>
+          <label>multi-forward-type（多 Forward 负载）
+            <select id="idxMultiForwardType">
+              <option value="">默认 simple-fault-tolerant</option>
+              <option value="simple-load-balance">simple-load-balance</option>
+            </select>
+          </label>
+          <label>memory
+            <select id="idxMemory">
+              <option value="">默认 tiny</option>
+              <option value="small">small</option>
+              <option value="large">large</option>
+              <option value="huge">huge</option>
+            </select>
+          </label>
+          <label>zip
+            <select id="idxZip">
+              <option value="">默认 auto</option>
+              <option value="force">force</option>
+            </select>
+          </label>
+          <label>zip-level（0=不压缩，1~9）<input id="idxZipLevel" type="number" min="0" max="9" placeholder="留空默认"></label>
+          <label id="idxDetectIntervalLabel">detect-interval
+            <input id="idxDetectInterval" type="text" placeholder="5000,367">
+          </label>
+          <label>node-worker-queue<input id="idxNodeWorkerQueue" type="number" placeholder="4095"></label>
+          <label>index-worker-queue<input id="idxIndexWorkerQueue" type="number" placeholder="4095"></label>
+          <label>index-service-worker-queue<input id="idxIndexServiceWorkerQueue" type="number" placeholder="4095"></label>
+          <label>packet-filter-worker-queue
+            <input id="idxPacketFilterWorkerQueue" type="number" placeholder="4095">
+          </label>
+          <label>pf-worker（0~128）<input id="idxPfWorker" type="number" min="0" max="128" value="0"></label>
+          <label>pf-route-bits<input id="idxPfRouteBits" type="text" placeholder="0x1"></label>
+        </div>
+        <p class="field-hint" id="idxAdvHint">detect-interval 格式：微秒,秒（默认 5000,367）；node-detect-worker 开启时调大可减轻路由器负担</p>
+        <p class="field-hint">pf-worker &gt; 0 时 gnb 会关闭 unified-forwarding；packet-filter-worker-queue 增大会显著增加内存占用</p>
+      </details>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>内网节点</h2>
+        <button id="btnAddClient" class="btn">+ 添加节点</button>
+      </div>
+      <div id="clientList"></div>
+    </section>
+
+    <section class="card actions-bar">
+      <button id="btnSave" class="btn">保存配置</button>
+      <button id="btnGenerate" class="btn primary">生成全部配置</button>
+      <button id="btnDownloadAll" class="btn">下载全部内网节点 ZIP</button>
+      <label class="inline-check generate-keys-check"><input type="checkbox" id="regenerateKeys"> 重新生成密钥（ed25519）</label>
+    </section>
+    <p class="field-hint actions-hint">默认保留已有节点的 security / ed25519 密钥，仅更新 conf 与脚本；新增节点会自动生成密钥。勾选「重新生成密钥」后全部节点密钥将替换，已部署的内网节点需重新下载配置。</p>
+
+    <section class="card" id="downloadSection" hidden>
+      <h2>配置包下载</h2>
+      <div id="downloadLinks" class="download-links"></div>
+    </section>
+
+    <section class="card log-card gnb-log-card">
+      <div class="section-head">
+        <h2>gnb 运行日志</h2>
+        <div class="gnb-log-actions">
+          <button id="btnGnbLogRefresh" type="button" class="btn small">刷新</button>
+          <label class="inline-check"><input type="checkbox" id="gnbLogAutoRefresh"> 自动刷新（5s）</label>
+        </div>
+      </div>
+      <p class="field-hint" id="gnbLogPathHint">文件日志未启用</p>
+      <pre id="gnbLogBox"></pre>
+    </section>
+
+    <section class="card log-card">
+      <h2>操作日志</h2>
+      <pre id="logBox"></pre>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
